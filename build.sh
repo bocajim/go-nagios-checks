@@ -11,8 +11,8 @@ case $os in
 		export GOBIN=$PWD/bin
 		;;
 	"Darwin")
-		export GOPATH=~/source/nats
-		export GOBIN=~/source/nats/bin
+		export GOPATH=$PWD
+		export GOBIN=$PWD/bin
 		;;
 	*)
 		echo "ERROR: Unknown OS."
@@ -34,7 +34,7 @@ build_all() {
 
 build_for_windows() {
 	# Builds 64bit Windows binaries
-	echo "Building 64bit Windows nats"
+	echo "Building 64bit Windows nagios-checks"
 
 	export GOOS=windows
 	export GOARCH=amd64
@@ -43,7 +43,7 @@ build_for_windows() {
 }
 
 build_for_linux() {
-	echo "Building 64bit Linux nats"
+	echo "Building 64bit Linux nagios-checks"
 
 	export GOOS=linux
 	build_all
