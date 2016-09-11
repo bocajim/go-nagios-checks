@@ -82,6 +82,10 @@ func CheckMetric(server, name string) {
 		nagios.ReturnResult(nagios.StatusUnknown, "No data returned for query.")
 	}
 
+	if len(objs) > 1 {
+		objs = objs[:len(objs)-1]
+	}
+
 	obj := objs[0]
 
 	resultValue := 0.0
