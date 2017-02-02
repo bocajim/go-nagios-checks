@@ -1,6 +1,7 @@
 package nagios
 
 import (
+	"flag"
 	"fmt"
 	"os"
 )
@@ -13,6 +14,14 @@ const (
 	StatusCritical = Status("CRITICAL")
 	StatusUnknown  = Status("UNKNOWN")
 )
+
+var WarnComparison string
+var CriticalComparison string
+
+func RegisterFlags() {
+	flag.StringVar(&WarnComparison, "wc", "", "warning comparison")
+	flag.StringVar(&CriticalComparison, "cc", "", "critical comparison")
+}
 
 func ReturnResult(status Status, message string, values ...interface{}) {
 

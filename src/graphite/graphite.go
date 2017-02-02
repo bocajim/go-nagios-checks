@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/bocajim/evaler"
 	"io/ioutil"
 	"nagios"
 	"net/http"
 	"strings"
+
+	"github.com/bocajim/evaler"
 )
 
 //http://mgmt-graphite/render?target=sumSeries(stats.gauges.prod.dwopen.*-us-*.mqtt.connections.*)&from=-1hours&format=json
@@ -24,8 +25,6 @@ var metric string
 var period string
 var scale string
 var aggregate string
-var warn string
-var critical string
 
 type Result struct {
 	Target     string      `json:"target"`
@@ -37,8 +36,6 @@ func RegisterFlags() {
 	flag.StringVar(&period, "gp", "-1hours", "time period to measure")
 	flag.StringVar(&scale, "gs", "1", "scale value before comparing")
 	flag.StringVar(&aggregate, "ga", "avg", "aggregation (avg, min, max)")
-	flag.StringVar(&warn, "gw", "", "warning comparison")
-	flag.StringVar(&critical, "gc", "", "critical comparison")
 }
 
 func CheckMetric(server, name string) {
@@ -48,12 +45,6 @@ func CheckMetric(server, name string) {
 	}
 	if len(metric) == 0 {
 		nagios.ReturnResult(nagios.StatusUnknown, "No metric specified")
-	}
-	if len(warn) == 0 {
-		nagios.ReturnResult(nagios.StatusUnknown, "No warning comparison specified")
-	}
-	if len(critical) == 0 {
-		nagios.ReturnResult(nagios.StatusUnknown, "No critical comparison specified")
 	}
 
 	url := server + "/render?target=" + metric + "&from=" + period + "&format=json"
@@ -117,7 +108,7 @@ func CheckMetric(server, name string) {
 		resultValue = evaler.BigratToFloat(resultScaled)
 	}
 
-	resultExprWarn, err := evaler.Eval(fmt.Sprintf("%f%s", resultValue, warn))
+	resultExprWarn, err := evaler.Eval(fmt.Sprintf("%f%s", resultValue, nagios.WarnComparison))
 	if err != nil {
 		nagios.ReturnResult(nagios.StatusUnknown, "Could not evaluate warning: "+err.Error())
 	}
@@ -126,7 +117,7 @@ func CheckMetric(server, name string) {
 		isWarning = false
 	}
 
-	resultExprCritical, err := evaler.Eval(fmt.Sprintf("%f%s", resultValue, critical))
+	resultExprCritical, err := evaler.Eval(fmt.Sprintf("%f%s", resultValue, nagios.CriticalComparison))
 	if err != nil {
 		nagios.ReturnResult(nagios.StatusUnknown, "Could not evaluate critical: "+err.Error())
 	}
@@ -136,9 +127,9 @@ func CheckMetric(server, name string) {
 	}
 
 	if isCritical {
-		nagios.ReturnResult(nagios.StatusCritical, "%s - %0.3f %s", name, resultValue, critical)
+		nagios.ReturnResult(nagios.StatusCritical, "%s - %0.3f %s", name, resultValue, nagios.CriticalComparison)
 	} else if isWarning {
-		nagios.ReturnResult(nagios.StatusWarning, "%s - %0.3f %s", name, resultValue, warn)
+		nagios.ReturnResult(nagios.StatusWarning, "%s - %0.3f %s", name, resultValue, nagios.WarnComparison)
 	} else {
 		nagios.ReturnResult(nagios.StatusOk, "%s - %0.3f", name, resultValue)
 	}

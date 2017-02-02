@@ -23,6 +23,9 @@ esac
 if [ ! -d "src/github.com/bocajim/evaler" ]; then
 	go get github.com/bocajim/evaler
 fi
+if [ ! -d "src/github.com/aws/aws-sdk-go" ]; then
+	go get github.com/aws/aws-sdk-go
+fi
 
 build_all() {
 	if [ -d "pkg" ]; then
