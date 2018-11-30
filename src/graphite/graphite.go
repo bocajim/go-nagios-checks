@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"nagios"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/bocajim/evaler"
@@ -25,6 +26,7 @@ var metric string
 var period string
 var scale string
 var aggregate string
+var ignoreUnknown bool
 
 type Result struct {
 	Target     string      `json:"target"`
@@ -36,9 +38,16 @@ func RegisterFlags() {
 	flag.StringVar(&period, "gp", "-1hours", "time period to measure")
 	flag.StringVar(&scale, "gs", "1", "scale value before comparing")
 	flag.StringVar(&aggregate, "ga", "avg", "aggregation (avg, min, max)")
+	flag.BoolVar(&ignoreUnknown, "gu", false, "ignore unknown")
 }
 
 func CheckMetric(server, name string) {
+
+	if name == "unknown" {
+		name = ""
+	} else {
+		name = name + " - "
+	}
 
 	if len(server) == 0 {
 		nagios.ReturnResult(nagios.StatusUnknown, "Bad server: "+server)
@@ -47,7 +56,7 @@ func CheckMetric(server, name string) {
 		nagios.ReturnResult(nagios.StatusUnknown, "No metric specified")
 	}
 
-	url := server + "/render?target=" + metric + "&from=" + period + "&format=json"
+	url := server + "/render?target=" + url.QueryEscape(metric) + "&from=" + period + "&format=json"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -66,11 +75,15 @@ func CheckMetric(server, name string) {
 	var objs []Result
 	err = json.Unmarshal(body, &objs)
 	if err != nil {
-		nagios.ReturnResult(nagios.StatusUnknown, "Could not parse graphite response.")
+		nagios.ReturnResult(nagios.StatusUnknown, "Could not parse graphite response: ["+string(body)+"] "+err.Error())
 	}
 
 	if len(objs) == 0 {
-		nagios.ReturnResult(nagios.StatusUnknown, "No data returned for query.")
+		if ignoreUnknown {
+			nagios.ReturnResult(nagios.StatusOk, "No data returned for query.")
+		} else {
+			nagios.ReturnResult(nagios.StatusUnknown, "No data returned for query.")
+		}
 	}
 
 	if len(objs) > 1 {
@@ -127,11 +140,11 @@ func CheckMetric(server, name string) {
 	}
 
 	if isCritical {
-		nagios.ReturnResult(nagios.StatusCritical, "%s - %0.3f %s", name, resultValue, nagios.CriticalComparison)
+		nagios.ReturnResult(nagios.StatusCritical, "%s%0.3f %s", name, resultValue, nagios.CriticalComparison)
 	} else if isWarning {
-		nagios.ReturnResult(nagios.StatusWarning, "%s - %0.3f %s", name, resultValue, nagios.WarnComparison)
+		nagios.ReturnResult(nagios.StatusWarning, "%s%0.3f %s", name, resultValue, nagios.WarnComparison)
 	} else {
-		nagios.ReturnResult(nagios.StatusOk, "%s - %0.3f", name, resultValue)
+		nagios.ReturnResult(nagios.StatusOk, "%s%0.3f", name, resultValue)
 	}
 
 	return
